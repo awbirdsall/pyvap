@@ -5,6 +5,7 @@ from scipy.constants import pi, k
 import numpy as np
 from scipy.integrate import ode
 import matplotlib.pyplot as plt
+from math import pow
 
 def dn(t, y, Ma, rho, cinf, po, Dg, T):
     '''Construct differential equations to describe change in n.
@@ -56,7 +57,7 @@ def evaporate(components, ninit, T, tsteps, dt):
         Ma[i] = component['Ma']
         rho[i] = component['rho']
         cinf[i] = component['cinf']
-        po[i] = component['po']
+        po[i] = calcp0(component['p0_a'], component['p0_b'], T)
         Dg[i] = component['Dg']
         
     # set up ode
@@ -90,6 +91,12 @@ def calcr(components, ns):
     vtot = calcv(components, ns)
     r = (3*vtot/(4*pi))**(1/3)
     return r
+
+def calcp0(a, b, temp):
+    '''given regression line parameters, calculate vapor pressure at given temperature.'''
+    log_p0 = a + b*(1000./temp)
+    p0 = pow(10, log_p0)
+    return p0
 
 def plotevap(components, ns, tsteps, dt, labels):
     '''convenience function for quick plot of evaporation'''
