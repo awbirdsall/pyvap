@@ -5,7 +5,10 @@ from scipy.constants import pi, k
 import numpy as np
 from scipy.integrate import ode
 import matplotlib.pyplot as plt
-from math import pow
+from math import pow, e
+
+Ma_h2o = 0.018/6.02e23
+rho_h2o = 1.000e3
 
 def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
     '''Construct differential equations to describe change in n.
@@ -125,20 +128,84 @@ def calcp0(a, b, temp):
     p0 = pow(10, log_p0)
     return p0
 
-def plotevap(components, ns, tsteps, dt, labels):
-    '''convenience function for quick plot of evaporation'''
+def plot_evap(x, molec_data, r_data, series_labels, xlabel):
     fig, ax = plt.subplots()
-    x = np.arange(start=0, stop=(tsteps+1)*dt, step=dt)/3600
-    for i, n in enumerate(ns.transpose()):
-        ax.plot(x, n, label=labels[i])
-    ax.set_ylabel("quantity compound / molec")
-    ax.set_xlabel("time / h")
-    ax.legend(loc='lower right')
+    if series_labels is not None:
+        for i in np.arange(molec_data.shape[1]):
+            ax.plot(x, molec_data[:,i], label=series_labels[i])
+        ax.legend(loc='lower right', ncol=3)
+    else:
+        ax.plot(x, molec_data[:,i])
 
-    r = calcr(components, ns)
+    ax.set_ylabel("quantity compound / molec")
+    ax.set_xlabel(xlabel)
+    ax.set_ylim(0, np.max(molec_data[0,:])*1.1)
+
     ax2 = ax.twinx()
-    ax2.plot(x, r, 'k--', label='radius (right axis)')
+    ax2.plot(x[:-1], r_data[:-1], 'k--', label='radius (right axis)')
     ax2.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
     ax2.set_ylabel("particle radius / m")
+    ax2.set_ylim(0, r_data[0]*1.1)
     ax2.legend()
-    plt.show()
+    
+    return fig, (ax, ax2)
+
+def efold_time(t, y):
+    '''Calculate "e-fold time" given timeseries and corresponding y values.
+    
+    Return -1 if e-fold time not reached in given series.
+    
+    Assume that "e-fold time" is sensical values for data series (i.e.,
+    monotonic decay) and that value at t=inf is 0.'''
+    efold_a = np.where(y<=1./e*y[0])[0]
+    if efold_a.size > 0:
+        efold_time = t[efold_a[0]]
+    else:
+        efold_time = -1
+    return efold_time
+
+
+def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False, has_water=False, xh2o=None):
+    '''all-in-one function to run kinetics model and plot and return output'''
+    output_dict = dict()
+    
+    # calc initial total num molecules
+    avg_rho = np.average([x['rho'] for x in cmpds],
+                         weights=comp) # kg m^-3
+    total_mass = 4./3.*pi * r**3 * avg_rho # kg
+    avg_molec_mass = np.average([x['Ma'] for x in cmpds],
+                                weights=comp) # kg molec^-1
+    total_molec = total_mass/avg_molec_mass # molec
+    
+    ncomp = comp/comp.sum() # make sure composition is normalized to 1.
+    molec_init = ncomp*total_molec
+
+    # set up and integrate ODE
+    t_a, dt_evap = np.linspace(start=0, stop=t, num=num, retstep=True)
+    evap_a = evaporate(cmpds, ninit=molec_init,
+                       T=temp, num=num, dt=dt_evap, has_water=has_water, xh2o=xh2o)
+    output_dict.update({'t_a': t_a, 'evap_a': evap_a})
+    
+    # back out radius timeseries
+    
+    r_a = calcr(cmpds, evap_a, has_water, xh2o)
+    output_dict.update({'r_a': r_a})
+    
+    # plot
+    if makefig:
+        xlabel = "time / h"
+        # diag_extra = "tstep={:.2e} s, temp={} K".format(tstep, temp)
+        fig, (ax, ax2) = plot_evap(x=output_dict['t_a']/3600,
+                            molec_data=evap_a,
+                            r_data=r_a,
+                            series_labels=complabels,
+                            xlabel=xlabel)
+        output_dict.update({'evap_fig': (fig, (ax, ax2))})
+    else:
+        output_dict.update({'evap_fig': None})
+    
+    # e-folding times, converted from seconds to hours
+    efold_dict = {l: efold_time(output_dict['t_a']/3600, evap_a[:, i]) for i, l in enumerate(complabels)}
+    output_dict.update({'efold_dict': efold_dict})
+        
+    return output_dict
