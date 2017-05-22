@@ -63,7 +63,7 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
     dn = 4*pi*r*Dg*(cinf-cs)
     return dn
 
-def evaporate(components, ninit, T, tsteps, dt, has_water=False, xh2o=None):
+def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
     '''calculate evaporation of multicomponent particle.
     
     num : int
