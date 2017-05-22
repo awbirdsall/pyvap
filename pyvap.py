@@ -7,7 +7,7 @@ from scipy.integrate import ode
 import matplotlib.pyplot as plt
 from math import pow
 
-def dn(t, y, Ma, rho, cinf, po, Dg, T):
+def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
     '''Construct differential equations to describe change in n.
     
     Parameters:
@@ -28,24 +28,43 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T):
     1D-array of gas-phase diffusivities, m^2 s^-1.
     T : float
     Temperature, K.
+    has_water : boolean
+    Include water in calculation.
+    xh2o : float
+    Fixed water mole fraction. Only used if has_water is True.
     
     Outputs
     -------
-    result : ndarray
-    1D-array describing dn for all components.
+    dn : ndarray
+    1D-array of dn for all components.
     '''
-    v = y*Ma/rho # array of partial volumes, m^3
-    vtot = v.sum() # particle volume, m^3
+    ytot = y.sum()
+    v = y*Ma/rho # array of partial volumes, m^3    
+    if has_water:
+        # known mole fraction of water
+        ntot = 1/(1-xh2o) * ytot
+        nh2o = xh2o * ntot
+        vh2o = nh2o*Ma_h2o/rho_h2o
+        vtot = v.sum()+vh2o # particle volume, m^3
+        # print("vh2o: {:.1e}".format(vh2o))
+    else:
+        ntot = ytot
+        vtot = v.sum()
+        
     r = (3*vtot/(4*pi))**(1/3) # radius, m^3
-    # print("calced r: {:.3e}".format(r))
-    x = y/y.sum() # mole fractions
+        
+    x = y/ntot # mole fractions, where ntot includes h2o if present
     # assume ideality in vapor pressure calculation
     cs = x*po/(k*T) # gas-phase concentration at surface, molec m^-3
-    result = 4*pi*r*Dg*(cinf-cs)
-    return result
+    # array of differential changes in number of molecules
+    dn = 4*pi*r*Dg*(cinf-cs)
+    return dn
 
-def evaporate(components, ninit, T, tsteps, dt):
-    '''calculate evaporation of multicomponent particle.'''
+def evaporate(components, ninit, T, tsteps, dt, has_water=False, xh2o=None):
+    '''calculate evaporation of multicomponent particle.
+    
+    num : int
+    total number of integrated time points, including t=0'''
     
     # extract data from components and build data arrays
     Ma = np.empty(len(components))
@@ -59,36 +78,44 @@ def evaporate(components, ninit, T, tsteps, dt):
         cinf[i] = component['cinf']
         po[i] = calcp0(component['p0_a'], component['p0_b'], T)
         Dg[i] = component['Dg']
-        
+       
     # set up ode
-    output = np.empty((tsteps+1, len(components)))
+    output = np.empty((int(num), len(components)))
     output[0, :] = ninit
 
     r = ode(dn)
     r.set_integrator('lsoda', with_jacobian=False,)
     r.set_initial_value(ninit, t=0)
-    r.set_f_params(Ma, rho, cinf, po, Dg, T)
+    r.set_f_params(Ma, rho, cinf, po, Dg, T, has_water, xh2o)
 
     # integrate and save output
-    while r.successful() and r.t < tsteps*(dt-1):
+    entry = 0
+    # use `entry` condition to avoid rounding errors causing
+    # possible problems with `r.t` condition
+    while r.successful() and entry < num-1:
         entry = int(round(r.t/dt))+1
         nextstep = r.integrate(r.t + dt)
-        # print("{}: dn at {:.1e} s: {}".format(entry, r.t, dn(r.t, r.y, Ma, rho, cinf, po, Dg, T)))
         output[entry, :] = nextstep
 
     return output
 
-def calcv(components, ns):
+def calcv(components, ns, has_water=False, xh2o=None):
     '''calculate volume of particle over time for given components'''
-    vtot = np.empty(ns.shape[0])
+    vtot = np.zeros_like(ns.shape[0])
     for i, c in enumerate(components):
         v = ns[:,i]*c['Ma']/c['rho']
         vtot = vtot + v
+    if has_water:
+        # water not explicitly tracked, instead fixed
+        # xh2o for fixed ambient RH (ah2o)
+        nh2o = xh2o/(1-xh2o)*ns.sum(axis=1)
+        vh2o = nh2o*Ma_h2o/rho_h2o
+        vtot = vtot + vh2o
     return vtot
 
-def calcr(components, ns):
+def calcr(components, ns, has_water=False, xh2o=None):
     '''given array of n values in time and list of components, calculate radius'''
-    vtot = calcv(components, ns)
+    vtot = calcv(components, ns, has_water, xh2o)
     r = (3*vtot/(4*pi))**(1/3)
     return r
 
