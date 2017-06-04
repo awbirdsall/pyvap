@@ -1,7 +1,7 @@
 # pyvap : simple model of particle evaporation
 # author: Adam Birdsall
 
-from scipy.constants import pi, k
+from scipy.constants import pi, k, R
 import numpy as np
 from scipy.integrate import ode
 import matplotlib.pyplot as plt
@@ -49,7 +49,6 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
         nh2o = xh2o * ntot
         vh2o = nh2o*Ma_h2o/rho_h2o
         vtot = v.sum()+vh2o # particle volume, m^3
-        # print("vh2o: {:.1e}".format(vh2o))
     else:
         ntot = ytot
         vtot = v.sum()
@@ -117,13 +116,31 @@ def calcv(components, ns, has_water=False, xh2o=None):
     return vtot
 
 def calcr(components, ns, has_water=False, xh2o=None):
-    '''given array of n values in time and list of components, calculate radius'''
+    '''given array of n values in time and list of components, calculate
+    radius'''
     vtot = calcv(components, ns, has_water, xh2o)
     r = (3*vtot/(4*pi))**(1/3)
     return r
 
+def convert_p0_enth_a_b(p0, del_enth, t0):
+    '''convert p0 and delta enthalpy to linear regression
+    line parameters used in calcp0.
+    
+    Parameters
+    ----------
+    p0 : float or ndarray
+    Vapor pressure at reference temperature, Pa.
+    del_enth : float or ndarray
+    Enthalpy of vaporization (or sublimation), J mol^-1.
+    t0 : float or ndarray
+    Reference temperature for p0 value, K.'''
+    p0_a = 1/np.log(10) * ((del_enth/(R*t0)) + np.log(p0))
+    p0_b = -del_enth/(1000*np.log(10)*R)
+    return p0_a, p0_b
+
 def calcp0(a, b, temp):
-    '''given regression line parameters, calculate vapor pressure at given temperature.'''
+    '''given regression line parameters, calculate vapor pressure at given
+    temperature.'''
     log_p0 = a + b*(1000./temp)
     p0 = pow(10, log_p0)
     return p0
