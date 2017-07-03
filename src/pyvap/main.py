@@ -78,7 +78,13 @@ def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
         Ma[i] = component['Ma']
         rho[i] = component['rho']
         cinf[i] = component['cinf']
-        po[i] = calcp0(component['p0_a'], component['p0_b'], T)
+        # use p298 and delh if available. otherwise use p0_a and p0_b
+        if ('p298' in component) and ('delh' in component):
+            p0a, p0b = convert_p0_enth_a_b(component['p298'],
+                                           component['delh'], 298.15)
+            po[i] = calcp0(p0a, p0b, T)
+        else:
+            po[i] = calcp0(component['p0_a'], component['p0_b'], T)
         Dg[i] = component['Dg']
        
     # set up ode
