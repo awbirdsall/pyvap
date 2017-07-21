@@ -1,7 +1,7 @@
 # pyvap : simple model of particle evaporation
 # author: Adam Birdsall
 
-from scipy.constants import pi, k, R
+from scipy.constants import pi, k, R, N_A
 import numpy as np
 from scipy.integrate import ode
 import matplotlib.pyplot as plt
@@ -75,7 +75,12 @@ def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
     po = np.empty(len(components))
     Dg = np.empty(len(components))
     for i, component in enumerate(components):
-        Ma[i] = component['Ma']
+        # use Ma (molecular weight, kg molec^-1) if provided
+        # otherwise use M (molar weight, kg  mol^-1).
+        if ('Ma' in component):
+            Ma[i] = component['Ma']
+        else:
+            Ma[i] = component['M']/N_A
         rho[i] = component['rho']
         cinf[i] = component['cinf']
         # use p298 and delh if available. otherwise use p0_a and p0_b
@@ -111,7 +116,10 @@ def calcv(components, ns, has_water=False, xh2o=None):
     '''calculate volume of particle over time for given components'''
     vtot = np.zeros_like(ns.shape[0])
     for i, c in enumerate(components):
-        v = ns[:,i]*c['Ma']/c['rho']
+        if ('Ma' in c):
+            v = ns[:,i]*c['Ma']/c['rho']
+        else:
+            v = ns[:,i]*c['M']/c['rho']/N_A
         vtot = vtot + v
     if has_water:
         # water not explicitly tracked, instead fixed
@@ -196,7 +204,9 @@ def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False, has_wa
     avg_rho = np.average([x['rho'] for x in cmpds],
                          weights=comp) # kg m^-3
     total_mass = 4./3.*pi * r**3 * avg_rho # kg
-    avg_molec_mass = np.average([x['Ma'] for x in cmpds],
+    # use either Ma or M
+    get_Ma = lambda cmpd: cmpd['Ma'] if 'Ma' in cmpd else cmpd['M']/N_A
+    avg_molec_mass = np.average([get_Ma(x) for x in cmpds],
                                 weights=comp) # kg molec^-1
     total_molec = total_mass/avg_molec_mass # molec
     
