@@ -1,18 +1,18 @@
 # pyvap : simple model of particle evaporation
 # author: Adam Birdsall
 
-from scipy.constants import pi, k, R, N_A
-import numpy as np
-from scipy.integrate import ode
+from math import e
 import matplotlib.pyplot as plt
-from math import pow, e
+import numpy as np
+from scipy.constants import pi, k, R, N_A
+from scipy.integrate import ode
 
-Ma_h2o = 0.018/6.02e23
-rho_h2o = 1.000e3
+MA_H2O = 0.018/6.02e23 # mass water, kg molec^-1
+RHO_H2O = 1.000e3 # density water, kg m^-3
 
 def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
     '''Construct differential equations to describe change in n.
-    
+
     Parameters:
     -----------
     t : float
@@ -35,7 +35,7 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
     Include water in calculation.
     xh2o : float
     Fixed water mole fraction. Only used if has_water is True.
-    
+
     Outputs
     -------
     dn : ndarray
@@ -47,14 +47,14 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
         # known mole fraction of water
         ntot = 1/(1-xh2o) * ytot
         nh2o = xh2o * ntot
-        vh2o = nh2o*Ma_h2o/rho_h2o
+        vh2o = nh2o * MA_H2O / RHO_H2O
         vtot = v.sum()+vh2o # particle volume, m^3
     else:
         ntot = ytot
         vtot = v.sum()
-        
+
     r = (3*vtot/(4*pi))**(1/3) # radius, m^3
-        
+
     x = y/ntot # mole fractions, where ntot includes h2o if present
     # assume ideality in vapor pressure calculation
     cs = x*po/(k*T) # gas-phase concentration at surface, molec m^-3
@@ -64,10 +64,10 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
 
 def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
     '''calculate evaporation of multicomponent particle.
-    
+
     num : int
     total number of integrated time points, including t=0'''
-    
+
     # extract data from components and build data arrays
     Ma = np.empty(len(components))
     rho = np.empty(len(components))
@@ -77,7 +77,7 @@ def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
     for i, component in enumerate(components):
         # use Ma (molecular weight, kg molec^-1) if provided
         # otherwise use M (molar weight, kg  mol^-1).
-        if ('Ma' in component):
+        if 'Ma' in component:
             Ma[i] = component['Ma']
         else:
             Ma[i] = component['M']/N_A
@@ -91,7 +91,7 @@ def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
         else:
             po[i] = calcp0(component['p0_a'], component['p0_b'], T)
         Dg[i] = component['Dg']
-       
+
     # set up ode
     output = np.empty((int(num), len(components)))
     output[0, :] = ninit
@@ -116,16 +116,16 @@ def calcv(components, ns, has_water=False, xh2o=None):
     '''calculate volume of particle over time for given components'''
     vtot = np.zeros_like(ns.shape[0])
     for i, c in enumerate(components):
-        if ('Ma' in c):
-            v = ns[:,i]*c['Ma']/c['rho']
+        if 'Ma' in c:
+            v = ns[:, i] * c['Ma'] / c['rho']
         else:
-            v = ns[:,i]*c['M']/c['rho']/N_A
+            v = ns[:, i] * c['M'] / c['rho'] / N_A
         vtot = vtot + v
     if has_water:
         # water not explicitly tracked, instead fixed
         # xh2o for fixed ambient RH (ah2o)
         nh2o = xh2o/(1-xh2o)*ns.sum(axis=1)
-        vh2o = nh2o*Ma_h2o/rho_h2o
+        vh2o = nh2o * MA_H2O / RHO_H2O
         vtot = vtot + vh2o
     return vtot
 
@@ -139,7 +139,7 @@ def calcr(components, ns, has_water=False, xh2o=None):
 def convert_p0_enth_a_b(p0, del_enth, t0):
     '''convert p0 and delta enthalpy to linear regression
     line parameters used in calcp0.
-    
+
     Parameters
     ----------
     p0 : float or ndarray
@@ -163,32 +163,32 @@ def plot_evap(x, molec_data, r_data, series_labels, xlabel):
     fig, ax = plt.subplots()
     if series_labels is not None:
         for i in np.arange(molec_data.shape[1]):
-            ax.plot(x, molec_data[:,i], label=series_labels[i])
+            ax.plot(x, molec_data[:, i], label=series_labels[i])
         ax.legend(loc='lower right', ncol=3)
     else:
-        ax.plot(x, molec_data[:,i])
+        ax.plot(x, molec_data[:, i])
 
     ax.set_ylabel("quantity compound / molec")
     ax.set_xlabel(xlabel)
-    ax.set_ylim(0, np.max(molec_data[0,:])*1.1)
+    ax.set_ylim(0, np.max(molec_data[0, :])*1.1)
 
     ax2 = ax.twinx()
     ax2.plot(x[:-1], r_data[:-1], 'k--', label='radius (right axis)')
-    ax2.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
+    ax2.ticklabel_format(axis='y', style='sci', scilimits=(-2, 2))
     ax2.set_ylabel("particle radius / m")
     ax2.set_ylim(0, r_data[0]*1.1)
     ax2.legend()
-    
+
     return fig, (ax, ax2)
 
 def efold_time(t, y):
     '''Calculate "e-fold time" given timeseries and corresponding y values.
-    
+
     Return -1 if e-fold time not reached in given series.
-    
+
     Assume that "e-fold time" is sensical values for data series (i.e.,
     monotonic decay) and that value at t=inf is 0.'''
-    efold_a = np.where(y<=1./e*y[0])[0]
+    efold_a = np.where(y <= 1./e*y[0])[0]
     if efold_a.size > 0:
         efold_time = t[efold_a[0]]
     else:
@@ -196,10 +196,11 @@ def efold_time(t, y):
     return efold_time
 
 
-def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False, has_water=False, xh2o=None):
+def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False,
+                 has_water=False, xh2o=None):
     '''all-in-one function to run kinetics model and plot and return output'''
     output_dict = dict()
-    
+
     # calc initial total num molecules
     avg_rho = np.average([x['rho'] for x in cmpds],
                          weights=comp) # kg m^-3
@@ -209,36 +210,37 @@ def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False, has_wa
     avg_molec_mass = np.average([get_Ma(x) for x in cmpds],
                                 weights=comp) # kg molec^-1
     total_molec = total_mass/avg_molec_mass # molec
-    
+
     ncomp = comp/comp.sum() # make sure composition is normalized to 1.
     molec_init = ncomp*total_molec
 
     # set up and integrate ODE
     t_a, dt_evap = np.linspace(start=0, stop=t, num=num, retstep=True)
-    evap_a = evaporate(cmpds, ninit=molec_init,
-                       T=temp, num=num, dt=dt_evap, has_water=has_water, xh2o=xh2o)
+    evap_a = evaporate(cmpds, ninit=molec_init, T=temp, num=num, dt=dt_evap,
+                       has_water=has_water, xh2o=xh2o)
     output_dict.update({'t_a': t_a, 'evap_a': evap_a})
-    
+
     # back out radius timeseries
-    
+
     r_a = calcr(cmpds, evap_a, has_water, xh2o)
     output_dict.update({'r_a': r_a})
-    
+
     # plot
     if makefig:
         xlabel = "time / h"
         # diag_extra = "tstep={:.2e} s, temp={} K".format(tstep, temp)
         fig, (ax, ax2) = plot_evap(x=output_dict['t_a']/3600,
-                            molec_data=evap_a,
-                            r_data=r_a,
-                            series_labels=complabels,
-                            xlabel=xlabel)
+                                   molec_data=evap_a,
+                                   r_data=r_a,
+                                   series_labels=complabels,
+                                   xlabel=xlabel)
         output_dict.update({'evap_fig': (fig, (ax, ax2))})
     else:
         output_dict.update({'evap_fig': None})
-    
+
     # e-folding times, converted from seconds to hours
-    efold_dict = {l: efold_time(output_dict['t_a']/3600, evap_a[:, i]) for i, l in enumerate(complabels)}
+    efold_dict = {l: efold_time(output_dict['t_a']/3600, evap_a[:, i])
+                  for i, l in enumerate(complabels)}
     output_dict.update({'efold_dict': efold_dict})
-        
+
     return output_dict
