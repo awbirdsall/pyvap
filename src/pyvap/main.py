@@ -63,10 +63,40 @@ def dn(t, y, Ma, rho, cinf, po, Dg, T, has_water=False, xh2o=None):
     return dn
 
 def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
-    '''calculate evaporation of multicomponent particle.
+    '''Calculate evaporation of multicomponent particle.
+
+    Parameters
+    ----------
+    components : list
+    List of components of particles, each represented as a dict of parameters.
+
+    ninit : numpy.ndarray
+    1D array of starting number of molecules of each component in `components`.
+
+    T : float
+    Temperature of evaporation, K.
 
     num : int
-    total number of integrated time points, including t=0'''
+    Total number of integrated time points, including t=0.
+
+    dt : float
+    Integration timestep, s.
+
+    has_water : boolean (optional, default False)
+    Toggle whether the presence of water is considered in calculating
+    evaporation (separate from list of `components`).
+
+    xh2o : float (optional, default None)
+    Fixed mole fraction of water to include in particle. Only considered if
+    `has_water` is True.
+
+    Returns
+    -------
+    output : numpy.ndarray
+    2D array of results from integration: number of molecules of each component
+    remaining at each timestep. First index is along `num` timesteps and second
+    index is along `len(components)` components.
+    '''
 
     # extract data from components and build data arrays
     Ma = np.empty(len(components))
@@ -198,7 +228,65 @@ def efold_time(t, y):
 
 def analyze_evap(cmpds, comp, r, t, num, temp, makefig=False, complabels=None,
                  has_water=False, xh2o=None):
-    '''all-in-one function to run kinetics model and plot and return output'''
+    '''All-in-one function to run kinetics model and plot and return output.
+    
+    Parameters
+    ----------
+    cmpds : list
+    List of compounds in particle, each represented as a dict of parameters.
+    Required keys in each dict include: `name`, `Dg` (gas-phase diffusivity,
+    m^2 s^-1), `Ma` or `M` (molecular mass or molar mass, kg molec^-1 or kg
+    mol^-1), `rho` (density, kg m^-3), `cinf` (gas-phase concentration at
+    infinite distance from particle surface), `p298` and `delh` or `p0_a` and
+    `p0_b` (vapor pressure at 298.15 K, Pa, and delta H of vaporization,
+    J mol^-1; or linear fit parameters to calculate intercept, Pa, and slope,
+    1000/T, for temperature dependence of vapor pressure).
+
+    comp : list or numpy.ndarray
+    List or 1D array of initial composition of particle, given as relative molar
+    abundance of each compound in `cmpds`. Does not need to be normalized to
+    1 or total number of molecules.
+
+    r : float
+    Starting particle radius, m.
+
+    t : float
+    Total integration time, s.
+
+    num : int
+    Total number of integrated time points, including t=0.
+
+    temp : float
+    Temperature of evaporation, K.
+
+    makefig : boolean (optional, default False)
+    Whether to make default output plot, using `plot_evap()`. If True, output
+    dict is updated with `plot_evap()` output (`fig`, (`ax`, `ax2`)) stored
+    under the `evap_fig` key.
+
+    complabels : list (optional, default None)
+    List of strings to use in legend of a produced figure, corresponding to
+    each compound in `cmpds`. If None, use `name` in each compound dict.
+
+    has_water : boolean (optional, default False)
+    Toggle whether the presence of water is considered in calculating
+    evaporation (separate from list of `components`).
+
+    xh2o : float (optional, default None)
+    Fixed mole fraction of water to include in particle. Only considered if
+    `has_water` is True.
+
+    Returns
+    -------
+    output_dict : dict
+    Dictionary of all output. Keys include `evap_a` (array of molecular
+    quantities at each timestep from `evaporate()`, `t_a` (array of timesteps
+    corresponding to `evap_a` output), `r_a` (array of particle radius at each
+    timestep, calculated from `calcr()`), `efold_dict` (dict of characteristic
+    e-folding evaporation time for each component, calculated from
+    `efold_time()`), and `evap_fig` (only present if `makefig` is True).
+    
+    '''
     output_dict = dict()
 
     # calc initial total num molecules
