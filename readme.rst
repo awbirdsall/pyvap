@@ -73,12 +73,15 @@ Dependencies
 
 Developed for Python 3.5.
 
-Requires ``numpy``, ``scipy``, and ``matplotlib>=1.5`` (automatically
-handled if using ``pip`` to install). I recommend using
-```conda`` <http://conda.pydata.org/docs/index.html>`__ to install the
-Scipy stack on a Windows machine if ``pip`` is having issues.
+Requires ``numpy``, ``scipy``, and ``matplotlib>=1.5`` (automatically handled
+if using ``pip`` to install). I recommend using conda_ to install the Scipy
+stack on a Windows machine if ``pip`` is having issues.
+
+.. _conda: http://conda.pydata.org/docs/index.html
 
 Development
 -----------
 
-Posting issues or pull requests to the github page is welcome!
+Posting issues or pull requests to the `github page`_ is welcome!
+
+.. _github page: https://github.com/awbirdsall/pyvap
