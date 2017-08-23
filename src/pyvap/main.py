@@ -196,7 +196,7 @@ def efold_time(t, y):
     return efold_time
 
 
-def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False,
+def analyze_evap(cmpds, comp, r, t, num, temp, makefig=False, complabels=None,
                  has_water=False, xh2o=None):
     '''all-in-one function to run kinetics model and plot and return output'''
     output_dict = dict()
@@ -211,6 +211,8 @@ def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False,
                                 weights=comp) # kg molec^-1
     total_molec = total_mass/avg_molec_mass # molec
 
+    if type(comp)==list:
+        comp = np.array(comp)
     ncomp = comp/comp.sum() # make sure composition is normalized to 1.
     molec_init = ncomp*total_molec
 
@@ -226,9 +228,11 @@ def analyze_evap(cmpds, comp, complabels, r, t, num, temp, makefig=False,
     output_dict.update({'r_a': r_a})
 
     # plot
+    if complabels is None:
+        complabels = [x['name'] for x in cmpds]
+
     if makefig:
         xlabel = "time / h"
-        # diag_extra = "tstep={:.2e} s, temp={} K".format(tstep, temp)
         fig, (ax, ax2) = plot_evap(x=output_dict['t_a']/3600,
                                    molec_data=evap_a,
                                    r_data=r_a,
