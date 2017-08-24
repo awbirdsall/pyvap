@@ -1,3 +1,5 @@
+# some of the below taken from
+# https://github.com/soft-matter/trackpy/commit/0a5c7e091f58bb899b57d58554b1202926f7a836
 language: python
 python:
   - "2.7"

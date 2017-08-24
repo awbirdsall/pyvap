@@ -1,6 +1,9 @@
 pyvap: kinetic model of particle evaporation
 ============================================
 
+.. image:: https://img.shields.io/pypi/v/pyvap.svg
+    :target: https://pypi.python.org/pypi/pyvap/
+
 .. image:: https://travis-ci.org/awbirdsall/pyvap.svg?branch=master
     :target: https://travis-ci.org/awbirdsall/pyvap
 
@@ -64,6 +67,12 @@ Installation
 ------------
 
 Install using ``pip``.
+
+Install from PyPI:
+
+::
+
+    pip install pyvap
 
 Install most recent Github commit (stability not guaranteed):
 
