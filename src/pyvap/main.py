@@ -143,9 +143,35 @@ def evaporate(components, ninit, T, num, dt, has_water=False, xh2o=None):
     return output
 
 def calcv(components, ns, has_water=False, xh2o=None):
-    '''calculate volume of particle over time for given components'''
+    '''Calculate volume of particle over time for given components.
+    
+    Parameters
+    ----------
+    components : list
+    List of dicts for each component.
+    
+    ns : numpy.array
+    2D numpy array of molar amounts of material. First index is entry number
+    (e.g., each timestep), second index is index of component in `components`.
+    
+    has_water : Boolean (optional, default False)
+    Whether implicit water is added in addition to `components`.
+    
+    xh2o : float (optional, default None)
+    Fixed mole fraction of water added to particle in calculating value. Only
+    considered if has_water is True.
+    
+    Returns
+    -------
+    vtot : numpy.array
+    1D array of total volumes calculated for each row in `ns`, with possible
+    addition of water, in m^3.
+    '''
     vtot = np.zeros_like(ns.shape[0])
     for i, c in enumerate(components):
+        # convert number of molecules in ns, using molecular/molar mass Ma/M
+        # (units kg (molec or mol)^-1) and density rho (kg m^-3), to volume in
+        # m^3
         if 'Ma' in c:
             v = ns[:, i] * c['Ma'] / c['rho']
         else:
@@ -160,15 +186,36 @@ def calcv(components, ns, has_water=False, xh2o=None):
     return vtot
 
 def calcr(components, ns, has_water=False, xh2o=None):
-    '''given array of n values in time and list of components, calculate
-    radius'''
+    '''Given array of n values in time and list of components, calculate radii.
+
+    Parameters
+    ----------
+    components : list
+    List of dicts for each component.
+    
+    ns : numpy.array
+    2D numpy array of molar amounts of material. First index is entry number
+    (e.g., each timestep), second index is index of component in `components`.
+    
+    has_water : Boolean (optional, default False)
+    Whether implicit water is added in addition to `components`.
+    
+    xh2o : float (optional, default None)
+    Fixed mole fraction of water added to particle in calculating value. Only
+    considered if has_water is True.
+
+    Returns
+    -------
+    r : numpy.array
+    Array of radii, in m, for each row of components given in `ns`.
+
+    '''
     vtot = calcv(components, ns, has_water, xh2o)
     r = (3*vtot/(4*pi))**(1/3)
     return r
 
 def convert_p0_enth_a_b(p0, del_enth, t0):
-    '''convert p0 and delta enthalpy to linear regression
-    line parameters used in calcp0.
+    '''Convert p0 and delta enthalpy to vapor pressure temp dependence params.
 
     Parameters
     ----------
@@ -177,7 +224,15 @@ def convert_p0_enth_a_b(p0, del_enth, t0):
     del_enth : float or ndarray
     Enthalpy of vaporization (or sublimation), J mol^-1.
     t0 : float or ndarray
-    Reference temperature for p0 value, K.'''
+    Reference temperature for p0 value, K.
+
+    Returns
+    -------
+    p0_a, p0_b : float
+    a (intercept, Pa) and b (slope, 1000/K) linear regression parameters for
+    temperature dependence of log10(vapor pressure).
+
+    '''
     p0_a = 1/np.log(10) * ((del_enth/(R*t0)) + np.log(p0))
     p0_b = -del_enth/(1000*np.log(10)*R)
     return p0_a, p0_b
