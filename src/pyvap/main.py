@@ -1,6 +1,7 @@
 # pyvap : simple model of particle evaporation
 # author: Adam Birdsall
 
+from __future__ import division
 from math import e
 import matplotlib.pyplot as plt
 import numpy as np
