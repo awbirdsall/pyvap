@@ -1,6 +1,9 @@
 pyvap: kinetic model of particle evaporation
 ============================================
 
+.. image:: https://travis-ci.org/awbirdsall/pyvap.svg?branch=master
+    :target: https://travis-ci.org/awbirdsall/pyvap
+
 pyvap models evaporation of components from a multicomponent spherical
 particle. The model follows the treatment of Maxwellian flux given in
 *Atmospheric Chemistry & Physics* by Seinfeld and Pandis. The model is
@@ -71,7 +74,7 @@ Install most recent Github commit (stability not guaranteed):
 Dependencies
 ------------
 
-Developed for Python 3.5.
+Tested on Python 2.7 and 3.5.
 
 Requires ``numpy``, ``scipy``, and ``matplotlib>=1.5`` (automatically handled
 if using ``pip`` to install). I recommend using conda_ to install the Scipy

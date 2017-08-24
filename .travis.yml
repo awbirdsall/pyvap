@@ -25,4 +25,4 @@ install:
   - conda info
   - conda list
   - python setup.py install
-script: py.test
+script: pytest
