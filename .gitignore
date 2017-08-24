@@ -2,3 +2,4 @@
 src/pyvap.egg-info/
 *.swp
 *__pycache__/
+.cache/

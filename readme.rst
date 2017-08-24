@@ -79,6 +79,13 @@ stack on a Windows machine if ``pip`` is having issues.
 
 .. _conda: http://conda.pydata.org/docs/index.html
 
+Running the tests requires ``pytest``.
+
+Testing
+-------
+
+Tests are located in the ``tests/`` subfolder and can be run using ``pytest``. Tests also require ``numpy``.
+
 Development
 -----------
 
