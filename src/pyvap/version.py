@@ -3,4 +3,4 @@
 2) we can import it in setup.py for the same reason
 3) we can import it into your module
 source: http://stackoverflow.com/a/16084844'''
-__version__ = '0.1.0'
+__version__ = '0.1.1'

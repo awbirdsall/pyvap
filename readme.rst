@@ -1,4 +1,4 @@
-pyvap 0.1.0: kinetic model of particle evaporation
+pyvap 0.1.1: kinetic model of particle evaporation
 ==================================================
 
 .. image:: https://img.shields.io/pypi/v/pyvap.svg
